@@ -4,18 +4,18 @@
 #include <string.h>
 
 int n_input;
-
+char *input;
 signed int *sequence;
 signed int *reality_graph;
 signed int *desire_graph;
 
-void readInput(char * filename)
+char * readInput(char * filename)
 {
     int i;
     int j = 0;
     int n_spaces = 0;
     long file_len;
-    char *input;
+    
     char gene[5];
     char s_gene;
     char temp[2];
@@ -72,33 +72,57 @@ void readInput(char * filename)
     //        j++;
     //    }
     //}
+
+    return input;
 }
 
-void createDiagram()
+void createDesireGraph()
 {
     int i;
 
     // allocating memmory for the graphs
-    reality_graph = (int*)calloc(2*n_input + 2, sizeof(signed int));
-    desire_graph = (signed int*)calloc(2*n_input + 2, sizeof(signed int));
+    
+    desire_graph = (signed int*)calloc(2*n_input + 4, sizeof(signed int));
 
     // creating desire edges
-    for (i = 0; i != 2*n_input + 2; i++)
+    for (i = 0; i < 2*n_input + 4; i++)
     {
         if (i%2 == 0)
             desire_graph[i] = -(i/2 + 1);
         else
-            desire_graph[i] = (i-1)/2;
+            desire_graph[i] = (i-1)/2;    
+       
     }
+}
 
-    // creating reality edges
-    
+void createRealityGraph(){
+  int i;
+  int n_teste = 2;
+  reality_graph = (signed int*)calloc(2*n_teste + 4, sizeof(signed int));
 
+  // TIRAR ESSA PARTE AQUI, QUANDO DEFINIRMOS A ESTRUTURA EXATA DA ENTRADA
+  signed int *teste;
+  teste = (signed int*)calloc(3, sizeof(signed int));
+  teste[0] = -1;
+  teste[1] = 2;
+  teste[2] = 3;
+  
+  
+  int next = 0;
+  for (i = 0; i < 2*n_teste + 2; i=i+2)
+    {
+        reality_graph[i] = next;
+        reality_graph[i+1] = -teste[i/2];
+        next = teste[i/2];
+    }
+    reality_graph[i] = next;
+    reality_graph[i+1] = -4;
 }
 
 int main(int argc, char *argv[])
 {
     readInput(argv[1]);
-    createDiagram();
+    createDesireGraph();
+    createRealityGraph();
     return 0;
 }

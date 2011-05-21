@@ -45,16 +45,39 @@ void readInput(char *filename)
 
     fclose(file);
 
-    // counting the number of spaces
+    	// counting the number of spaces
     for (i = 0; input[i] != '\0'; i++)
     {
         if (isspace(input[i]))
+	{
             n_spaces++;
+	}	
+	        
     }
-
-    // input size is the number of spaces plus one
+    
+// input size is the number of spaces plus one
     n_input = n_spaces++;
 
+    char *element = (char *)calloc(2, sizeof(char));
+    sequence = (int *)calloc(n_input, sizeof(int));
+   // converting to the signed int array
+    int counter = 0;
+    for (i = 0; input[i] != '\0'; i++)
+    {
+        if (isspace(input[i]))
+	{
+            element[0] = input[i-2];
+	    element[1] = input[i-1];
+	    
+	    sequence[counter] = atoi(element);	
+            printf("%d,", sequence[counter]);
+	    counter++;
+	}	
+    }
+
+    
+
+/*
     // getting the sequence from the input
     sequence = (signed int *)calloc(n_input, sizeof(signed int));
     gene = (char *)calloc(6, sizeof(char));
@@ -74,6 +97,7 @@ void readInput(char *filename)
             j++;
         }
     }
+*/
 }
 
 void createDesireGraph()
@@ -81,16 +105,18 @@ void createDesireGraph()
     int i;
 
     // allocating memmory for the graphs
-    desire_graph = (signed int*)calloc(2*n_input + 4, sizeof(signed int));
+    desire_graph = (signed int*)calloc(2*n_input + 2, sizeof(signed int));
 
     // creating desire edges
-    for (i = 0; i < 2*n_input + 4; i++)
+    int next = 0;    
+    printf("\nARESTAS DE DESEJO\n");   
+    for (i = 1; i < n_input+2; i++)
     {
-        if (i%2 == 0)
-            desire_graph[i] = -(i/2 + 1);
-        else
-            desire_graph[i] = (i-1)/2;    
-       
+        desire_graph[i] = next;
+	desire_graph[i+1] = -i;
+	next = i;
+        printf("(%d",desire_graph[i]);
+	printf(",%d)",desire_graph[i+1]); 
     }
 }
 
@@ -98,24 +124,21 @@ void createRealityGraph()
 {
     int i;
     int next = 0;
-    int n_teste = 2;
-    signed int *teste;
-    reality_graph = (signed int*)calloc(2*n_teste + 4, sizeof(signed int));
+    reality_graph = (signed int*)calloc(2*n_input + 2, sizeof(signed int));
 
-    // TIRAR ESSA PARTE AQUI, QUANDO DEFINIRMOS A ESTRUTURA EXATA DA ENTRADA
-    teste = (signed int*)calloc(3, sizeof(signed int));
-    teste[0] = -1;
-    teste[1] = 2;
-    teste[2] = 3;
-
-    for (i = 0; i < 2*n_teste + 2; i=i+2)
+    printf("\nARESTAS DE REALIDADE\n");
+    for (i = 0; i < 2*n_input; i=i+2)
     {
         reality_graph[i] = next;
-        reality_graph[i+1] = -teste[i/2];
-        next = teste[i/2];
+        reality_graph[i+1] = -sequence[i/2];
+        next = sequence[i/2];
+	printf("(%d",reality_graph[i]);
+	printf(",%d)",reality_graph[i+1]);
     }
     reality_graph[i] = next;
-    reality_graph[i+1] = -4;
+    reality_graph[i+1] = -(n_input+1);
+    printf("(%d",reality_graph[i]);
+    printf(",%d)",reality_graph[i+1]);
 }
 
 int main(int argc, char *argv[])

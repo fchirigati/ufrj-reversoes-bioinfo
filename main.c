@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <math.h>
 
 int n_input;
 char *input;
@@ -58,20 +59,25 @@ void readInput(char *filename)
 // input size is the number of spaces plus one
     n_input = n_spaces++;
 
-    char *element = (char *)calloc(2, sizeof(char));
+    char *element = (char *)calloc(n_input, sizeof(char));
     sequence = (int *)calloc(n_input, sizeof(int));
    // converting to the signed int array
     int counter = 0;
+    int last_space = -1;
     for (i = 0; input[i] != '\0'; i++)
     {
         if (isspace(input[i]))
+
 	{
-            element[0] = input[i-2];
-	    element[1] = input[i-1];
-	    
+	    for (j = 0; j<(i-last_space); j++)
+            {
+		element[j] = input[last_space+j+1];
+		
+	    }
 	    sequence[counter] = atoi(element);	
             printf("%d,", sequence[counter]);
 	    counter++;
+	    last_space = i;
 	}	
     }
 
@@ -107,7 +113,6 @@ void createDesireGraph()
     // allocating memmory for the graphs
     desire_graph = (signed int*)calloc(2*n_input + 2, sizeof(signed int));
 
-    // creating desire edges
     int next = 0;    
     printf("\nARESTAS DE DESEJO\n");   
     for (i = 1; i < n_input+2; i++)
@@ -141,10 +146,39 @@ void createRealityGraph()
     printf(",%d)",reality_graph[i+1]);
 }
 
+void revert(int i,int len) ///i -> initial, len-> lenght
+{
+	   printf("\nREVERTENDO\n");
+ 
+	signed int temp;
+	int k;
+	int middle; 
+	for (k = 0; k < len/2; k++)
+	{
+		temp = sequence[(i+len)-k-1];
+		sequence[(i+len)-k-1] = -sequence[i+k];  	
+		sequence[i+k] = -temp;
+	}
+	// odd len case
+	middle = (int)floor(len/2);
+	if(len%2==1) sequence[middle+1] = -sequence[middle+1];
+
+	// printing for debugging
+	for (k = 0; k < n_input; k++)
+	{
+		printf("%d,",sequence[k]); 
+	}
+
+} 
+
+
 int main(int argc, char *argv[])
 {
     readInput(argv[1]);
     createDesireGraph();
     createRealityGraph();
-    return 0;
+    revert(1,5);
+    createRealityGraph();
+    
+	return 0;
 }

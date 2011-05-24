@@ -3,21 +3,23 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 
 int n_input;
-char *input;
 signed int *sequence;
-signed int *reality_graph;
-signed int *desire_graph;
+signed int **reality_graph;
+signed int **desire_graph;
 
 void readInput(char *filename)
 {
     int i;
     int j;
-    int n_spaces = 0;
+    int n_spaces;
+    int counter;
+    int last_space;
     long file_len;
-    
-    char *gene;
+    char *input;
+    char *element;
     FILE *file = fopen(filename, "r");
 
     if (file == 0)
@@ -46,166 +48,243 @@ void readInput(char *filename)
 
     fclose(file);
 
-    	// counting the number of spaces
+    // counting the number of spaces
+    n_spaces = 0;
     for (i = 0; input[i] != '\0'; i++)
     {
         if (isspace(input[i]))
-	{
-            n_spaces++;
-	}	
-	        
+            n_spaces++;   
     }
     
-// input size is the number of spaces plus one
-    n_input = n_spaces++;
+    // input size is the number of spaces plus one
+    n_input = n_spaces + 1;
 
-    char *element = (char *)calloc(n_input, sizeof(char));
+    element = (char *)calloc(n_input, sizeof(char));
     sequence = (int *)calloc(n_input, sizeof(int));
-   // converting to the signed int array
-    int counter = 0;
-    int last_space = -1;
+
+    // converting to signed int array
+    counter = 0;
+    last_space = -1;
     for (i = 0; input[i] != '\0'; i++)
     {
         if (isspace(input[i]))
+        {
+            for (j = 0; j < (i - last_space); j++)
+                element[j] = input[last_space + j + 1];
 
+            sequence[counter] = atoi(element);
+            counter++;
+            last_space = i;
+        }
+    }
+
+    i++;
+    for (j = 0; j < (i - last_space); j++)
+        element[j] = input[last_space + j + 1];
+    sequence[counter] = atoi(element);
+}
+
+void printSequence()
+{
+    int i;
+
+    printf("\n\nSequencia\n");
+
+    for (i = 0; i < n_input; i++)
 	{
-	    for (j = 0; j<(i-last_space); j++)
-            {
-		element[j] = input[last_space+j+1];
-		
-	    }
-	    sequence[counter] = atoi(element);	
-            printf("%d,", sequence[counter]);
-	    counter++;
-	    last_space = i;
-	}	
-    }
-
-    
-
-/*
-    // getting the sequence from the input
-    sequence = (signed int *)calloc(n_input, sizeof(signed int));
-    gene = (char *)calloc(6, sizeof(char));
-    j = 0;
-    for (i = 0; input[i] != '\0'; i++)
-    {
-        if (!isspace(input[i]))
-        {
-            printf("%c\n", input[i]);
-            printf("gene: '%s'\n", gene);
-            gene = strcat(gene, (char *)input[i]);
-        }
-        else
-        {
-            sequence[j] = atoi(gene);
-            gene = strcpy(gene, "");
-            j++;
-        }
-    }
-*/
+		printf("%d, ",sequence[i]); 
+	}
 }
 
 void createDesireGraph()
 {
     int i;
 
-    // allocating memmory for the graphs
-    desire_graph = (signed int*)calloc(2*n_input + 2, sizeof(signed int));
+    desire_graph = (signed int **)malloc((n_input + 2) * sizeof(*desire_graph));
 
-    int next = 0;    
-    printf("\nARESTAS DE DESEJO\n");   
-    for (i = 1; i < n_input+2; i++)
+    for (i = 0; i <= n_input + 2; i++)
+        desire_graph[i] = malloc(2 * sizeof(signed int));
+
+    desire_graph[0][0] = INT_MAX;
+    desire_graph[n_input + 1][1] = INT_MAX;
+
+    for (i = 0; i < n_input + 2; i++)
     {
-        desire_graph[i] = next;
-	desire_graph[i+1] = -i;
-	next = i;
-        printf("(%d",desire_graph[i]);
-	printf(",%d)",desire_graph[i+1]); 
+        if (i == 0)
+            desire_graph[i][1] = -(i + 1);
+        else if (i == n_input + 1)
+            desire_graph[i][0] = +(i - 1);
+        else
+        {
+            desire_graph[i][0] = +(i - 1);
+            desire_graph[i][1] = -(i + 1);
+        }
+    }
+}
+
+void printDesireGraph()
+{
+    int i;
+
+    printf("\n\nArestas de Desejo\n");
+
+    for (i = 0; i <= n_input + 1; i++)
+    {
+        printf("(%d, ", desire_graph[i][0]);
+        printf("%d)", desire_graph[i][1]);	
     }
 }
 
 void createRealityGraph()
 {
     int i;
-    int next = 0;
-    /*reality_graph = (signed int**)malloc((n_input+1)*sizeof(signed int));
-      for (i=0; i<n_input; i++) {
-    	reality_graph[i] = (signed int*)malloc(2*sizeof(signed int));
-    }
-*/
-
-   //signed int **reality_graph; //pointer to a pointer (or in our case an array of pointers)
-   //reality_graph = new signed int*[2]; //allocate p to point to an array of pointers
-
-    signed int **reality_graph = malloc((n_input+2) * sizeof(*reality_graph));
-    for (i = 0; i <= n_input+2; i++) reality_graph[i] = malloc(2 * sizeof(signed int));
-
-
+    int next;
     signed int temp;
-    reality_graph[0][0] = 0;
     
-    printf("\nARESTAS DE REALIDADE\n");
-    for (i = 0; i <n_input;i++)
+    reality_graph = (signed int **)malloc((n_input + 2) * sizeof(*reality_graph));
+    
+    for (i = 0; i <= n_input + 2; i++)
+        reality_graph[i] = malloc(2 * sizeof(signed int));
+
+    reality_graph[0][0] = INT_MAX;
+    next = 0;
+    for (i = 0; i < n_input; i++)
     {
+        temp = -sequence[i];
 
-	temp = -sequence[i];
-	if(next>=0) reality_graph[next][1] = temp;
-	else reality_graph[-next][0] = temp;
+        if (next >= 0)
+            reality_graph[next][1] = temp;
+        else
+            reality_graph[-next][0] = temp;
 	
-	if(temp>=0) reality_graph[temp][1] = next;
-	else reality_graph[-temp][0] = next; 
-	
-	next =  sequence[i];
+        if(temp >= 0)
+            reality_graph[temp][1] = next;
+        else
+            reality_graph[-temp][0] = next;
+
+        next = sequence[i];
     }
-	temp = -n_input-1;
-	if(next>=0) reality_graph[next][1] = temp;
-	else reality_graph[-next][0] = temp;
-	reality_graph[-temp][0] = next; 
-	reality_graph[-temp][1] = -temp;
-    
 
-    for(i=0;i<=n_input+1;i++)
-	{
-	printf("(%d,",reality_graph[i][0]);
-	printf("%d)",reality_graph[i][1]);	
-	}
+    temp = -(n_input + 1);
 
+    if(next >= 0)
+        reality_graph[next][1] = temp;
+    else
+        reality_graph[-next][0] = temp;
+
+    reality_graph[-temp][0] = next;
+    reality_graph[-temp][1] = INT_MAX;
 }
 
-void revert(int i,int len) ///i -> initial, len-> lenght
+void printRealityGraph()
 {
-	   printf("\nREVERTENDO\n");
- 
+    int i;
+
+    printf("\n\nArestas de Realidade\n");
+
+    for (i = 0; i <= n_input + 1; i++)
+    {
+        printf("(%d, ", reality_graph[i][0]);
+        printf("%d)", reality_graph[i][1]);	
+    }
+}
+
+void updateRealityGraph(int i, int len)
+{
+    // first edge
+    if (i == 0)
+        reality_graph[0][1] = -sequence[i];
+    else
+    {
+        if (sequence[i - 1] > 0)
+            reality_graph[sequence[i - 1]][1] = -sequence[i];
+        else
+            reality_graph[-sequence[i - 1]][0] = -sequence[i];
+    }
+
+    if (sequence[i] > 0)
+    {
+        if (i == 0)
+            reality_graph[sequence[i]][0] = 0;
+        else
+            reality_graph[sequence[i]][0] = sequence[i - 1];
+    }
+    else
+    {
+        if (i == 0)
+            reality_graph[sequence[i]][1] = 0;
+        else
+            reality_graph[-sequence[i]][1] = sequence[i - 1];
+    }
+
+    // second edge
+    if ((i + len) == n_input)
+        reality_graph[n_input + 1][0] = sequence[n_input - 1];
+    else
+    {
+        if (sequence[i + len] > 0)
+            reality_graph[sequence[i + len]][0] = sequence[i + len - 1];
+        else
+            reality_graph[-sequence[i + len]][1] = sequence[i + len - 1];
+    }
+
+    if (sequence[i + len - 1] > 0)
+    {
+        if ((i + len) == n_input)
+            reality_graph[sequence[i + len - 1]][1] = -(i + len + 1);
+        else
+            reality_graph[sequence[i + len - 1]][1] = -sequence[i + len];
+    }
+    else
+    {
+        if ((i + len) == n_input)
+            reality_graph[-sequence[i + len - 1]][0] = -(i + len + 1);
+        else
+            reality_graph[-sequence[i + len - 1]][0] = -sequence[i + len];
+    }
+}
+
+void revert(int i, int len)
+{
 	signed int temp;
 	int k;
-	int middle; 
+	int middle;
+
+    printf("\n\nReversao(%d, ", i);
+    printf("%d)\n", len);
+
 	for (k = 0; k < len/2; k++)
 	{
-		temp = sequence[(i+len)-k-1];
-		sequence[(i+len)-k-1] = -sequence[i+k];  	
-		sequence[i+k] = -temp;
+		temp = sequence[(i + len) - k - 1];
+		sequence[(i + len) - k - 1] = -sequence[i + k];  	
+		sequence[i + k] = -temp;
 	}
-	// odd len case
+
 	middle = (int)floor(len/2);
-	if(len%2==1) sequence[middle+1] = -sequence[middle+1];
+	if (len%2 == 1)
+    {
+        temp = sequence[i + middle];
+        sequence[i + middle] = -temp;
+    }
 
-	// printing for debugging
-	for (k = 0; k < n_input; k++)
-	{
-		printf("%d,",sequence[k]); 
-	}
-
+    updateRealityGraph(i, len);
 } 
 
 
 int main(int argc, char *argv[])
 {
     readInput(argv[1]);
-    //createDesireGraph();
+    printSequence();
+
+    createDesireGraph();
+    printDesireGraph();
+
     createRealityGraph();
-    //revert(1,5);
-    //createRealityGraph();
-    
+    printRealityGraph();
+
+    //revert(0,5);
+    //printSequence();
+    //printRealityGraph();
+
 	return 0;
 }

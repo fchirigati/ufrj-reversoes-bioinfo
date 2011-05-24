@@ -52,7 +52,8 @@ void readInput(char *filename)
     n_spaces = 0;
     for (i = 0; input[i] != '\0'; i++)
     {
-        if (isspace(input[i]))
+
+        if (isspace(input[i]) && (input[i+1] != '\0'))
             n_spaces++;   
     }
     
@@ -81,9 +82,6 @@ void readInput(char *filename)
     }
 
     i++;
-    for (j = 0; j < (i - last_space); j++)
-        element[j] = input[last_space + j + 1];
-    sequence[counter] = atoi(element);
 }
 
 void printSequence()

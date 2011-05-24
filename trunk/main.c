@@ -63,6 +63,8 @@ void readInput(char *filename)
     sequence = (int *)calloc(n_input, sizeof(int));
 
     // converting to signed int array
+    // +i means that i's orientation is -->
+    // -i means that i's orientation is <--
     counter = 0;
     last_space = -1;
     for (i = 0; input[i] != '\0'; i++)
@@ -100,6 +102,9 @@ void createDesireGraph()
 {
     int i;
 
+    // desire_graph is a matrix (n_input + 2) by 2
+    // desire_graph[i][0] stores the gene which -i is connected with, considering desire edges
+    // desire_graph[i][1] stores the gene which +i is connected with, considering desire edges
     desire_graph = (signed int **)malloc((n_input + 2) * sizeof(*desire_graph));
 
     for (i = 0; i <= n_input + 2; i++)
@@ -141,6 +146,9 @@ void createRealityGraph()
     int next;
     signed int temp;
     
+    // reality_graph is a matrix (n_input + 2) by 2
+    // reality_graph[i][0] stores the gene which -i is connected with, considering reality edges
+    // reality_graph[i][1] stores the gene which +i is connected with, considering reality edges
     reality_graph = (signed int **)malloc((n_input + 2) * sizeof(*reality_graph));
     
     for (i = 0; i <= n_input + 2; i++)

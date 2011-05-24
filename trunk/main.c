@@ -129,21 +129,48 @@ void createRealityGraph()
 {
     int i;
     int next = 0;
-    reality_graph = (signed int*)calloc(2*n_input + 2, sizeof(signed int));
-
-    printf("\nARESTAS DE REALIDADE\n");
-    for (i = 0; i < 2*n_input; i=i+2)
-    {
-        reality_graph[i] = next;
-        reality_graph[i+1] = -sequence[i/2];
-        next = sequence[i/2];
-	printf("(%d",reality_graph[i]);
-	printf(",%d)",reality_graph[i+1]);
+    /*reality_graph = (signed int**)malloc((n_input+1)*sizeof(signed int));
+      for (i=0; i<n_input; i++) {
+    	reality_graph[i] = (signed int*)malloc(2*sizeof(signed int));
     }
-    reality_graph[i] = next;
-    reality_graph[i+1] = -(n_input+1);
-    printf("(%d",reality_graph[i]);
-    printf(",%d)",reality_graph[i+1]);
+*/
+
+   //signed int **reality_graph; //pointer to a pointer (or in our case an array of pointers)
+   //reality_graph = new signed int*[2]; //allocate p to point to an array of pointers
+
+    signed int **reality_graph = malloc((n_input+2) * sizeof(*reality_graph));
+    for (i = 0; i <= n_input+2; i++) reality_graph[i] = malloc(2 * sizeof(signed int));
+
+
+    signed int temp;
+    reality_graph[0][0] = 0;
+    
+    printf("\nARESTAS DE REALIDADE\n");
+    for (i = 0; i <n_input;i++)
+    {
+
+	temp = -sequence[i];
+	if(next>=0) reality_graph[next][1] = temp;
+	else reality_graph[-next][0] = temp;
+	
+	if(temp>=0) reality_graph[temp][1] = next;
+	else reality_graph[-temp][0] = next; 
+	
+	next =  sequence[i];
+    }
+	temp = -n_input-1;
+	if(next>=0) reality_graph[next][1] = temp;
+	else reality_graph[-next][0] = temp;
+	reality_graph[-temp][0] = next; 
+	reality_graph[-temp][1] = -temp;
+    
+
+    for(i=0;i<=n_input+1;i++)
+	{
+	printf("(%d,",reality_graph[i][0]);
+	printf("%d)",reality_graph[i][1]);	
+	}
+
 }
 
 void revert(int i,int len) ///i -> initial, len-> lenght
@@ -175,10 +202,10 @@ void revert(int i,int len) ///i -> initial, len-> lenght
 int main(int argc, char *argv[])
 {
     readInput(argv[1]);
-    createDesireGraph();
+    //createDesireGraph();
     createRealityGraph();
-    revert(1,5);
-    createRealityGraph();
+    //revert(1,5);
+    //createRealityGraph();
     
 	return 0;
 }

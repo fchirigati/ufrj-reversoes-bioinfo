@@ -6,6 +6,7 @@
 #include <limits.h>
 
 int n_input;
+int *position;
 signed int *sequence;
 signed int **reality_graph;
 signed int **desire_graph;
@@ -52,7 +53,6 @@ void readInput(char *filename)
     n_spaces = 0;
     for (i = 0; input[i] != '\0'; i++)
     {
-
         if (isspace(input[i]) && (input[i+1] != '\0'))
             n_spaces++;   
     }
@@ -61,7 +61,8 @@ void readInput(char *filename)
     n_input = n_spaces + 1;
 
     element = (char *)calloc(n_input, sizeof(char));
-    sequence = (int *)calloc(n_input, sizeof(int));
+    sequence = (signed int *)calloc(n_input, sizeof(signed int));
+    position = (int *)calloc(n_input + 1, sizeof(int));
 
     // converting to signed int array
     // +i means that i's orientation is -->
@@ -76,12 +77,17 @@ void readInput(char *filename)
                 element[j] = input[last_space + j + 1];
 
             sequence[counter] = atoi(element);
+            position[abs(atoi(element))] = counter;
             counter++;
             last_space = i;
         }
     }
 
     i++;
+    position[abs(atoi(element))] = counter;
+
+    free(input);
+    free(element);
 }
 
 void printSequence()
@@ -92,7 +98,7 @@ void printSequence()
 
     for (i = 0; i < n_input; i++)
 	{
-		printf("%d, ",sequence[i]); 
+		printf("%d, ", sequence[i]); 
 	}
 }
 
@@ -252,17 +258,23 @@ void updateRealityGraph(int i, int len)
 
 void revert(int i, int len)
 {
-	signed int temp;
 	int k;
 	int middle;
+    int temp_pos;
+    signed int temp;
 
     printf("\n\nReversao(%d, ", i);
     printf("%d)\n", len);
 
 	for (k = 0; k < len/2; k++)
 	{
+        temp_pos = position[abs(sequence[(i + len) - k - 1])];
 		temp = sequence[(i + len) - k - 1];
-		sequence[(i + len) - k - 1] = -sequence[i + k];  	
+
+        position[abs(sequence[(i + len) - k - 1])] = position[abs(sequence[i + k])];
+		sequence[(i + len) - k - 1] = -sequence[i + k];
+
+        position[abs(sequence[i + k])] = temp_pos;
 		sequence[i + k] = -temp;
 	}
 
@@ -274,8 +286,15 @@ void revert(int i, int len)
     }
 
     updateRealityGraph(i, len);
-} 
+}
 
+void sortReversal()
+{
+    // lr_edges stores the reality edges that go from left to right
+    // rl_edges stores the reality edges that go from right to left
+    signed int *lr_edges;
+    signed int *rl_edges;
+}
 
 int main(int argc, char *argv[])
 {
@@ -288,7 +307,7 @@ int main(int argc, char *argv[])
     createRealityGraph();
     printRealityGraph();
 
-    //revert(0,5);
+    //revert(0,3);
     //printSequence();
     //printRealityGraph();
 

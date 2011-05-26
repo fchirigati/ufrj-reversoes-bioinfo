@@ -6,11 +6,14 @@
 #include <limits.h>
 
 int n_input;
+int n_cycles;
 int *position;
 int **cycle_id;
+int **components;
 signed int *sequence;
 signed int **reality_graph;
 signed int **desire_graph;
+signed int ***cycles;
 
 void readInput(char *filename)
 {
@@ -314,9 +317,7 @@ signed int **findCycle(int initial_pos, int id)
 
     temp_cycle = (signed int **)calloc(n_input + 1, sizeof(*temp_cycle));
     for (i = 0; i != (n_input + 1); i++)
-    {
         temp_cycle[i] = calloc(3, sizeof(signed int));
-    }
 
     i = 0;
     j = 0;
@@ -386,7 +387,6 @@ void findAllCycles()
     // 'cycles' stores all the current cycles
     // as we do not know initially how many cycles there are, we first use 'temp_cycles', and then,
     // we create 'cycles' with the correct size
-    signed int ***cycles;
     signed int ***temp_cycles;
 
     temp_cycles = (signed int ***)calloc(n_input + 1, sizeof(**temp_cycles));
@@ -417,7 +417,46 @@ void findAllCycles()
     for (i = 0; i != j; i++)
         cycles[i] = temp_cycles[i];
 
+    n_cycles = j;
+
     free(temp_cycles);
+}
+
+void findComponents()
+{
+    int i;
+    int j;
+    signed int current;
+
+    // 'count_cycles' stores how many reality edges are in each cycle
+    int *count_cycles;
+
+    // 'components' stores all the good components
+    // if a bad component is found, the algorithm will finish its execution
+    // as we do not know initially how many good components there are, we first use 'temp_components', and then,
+    // we create 'components' with the correct size
+    int **temp_components;
+
+    count_cycles = (int *)calloc(n_cycles, sizeof(int));
+    
+    temp_components = (int **)calloc(n_cycles, sizeof(*temp_components));
+
+    // following the reality edges in order
+    current = 0;
+    for (i = 0; i < n_input + 1; i ++)
+    {
+        if (current >= 0)
+        {
+            if (count_cycles[cycle_id[current][1] - 1])
+            count_cycles[cycle_id[current][1] - 1]++;
+            current = -reality_graph[current][1];
+        }
+        else
+        {
+            count_cycles[cycle_id[-current][0] - 1]++;
+            current = -reality_graph[-current][0];
+        }
+    }
 }
 
 void sortReversal()

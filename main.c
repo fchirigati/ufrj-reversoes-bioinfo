@@ -8,6 +8,7 @@
 int n_input;
 int n_cycles;
 int *position;
+int *component_id;
 int **cycle_id;
 int **components;
 signed int *sequence;
@@ -112,10 +113,10 @@ void createDesireGraph()
     // desire_graph is a matrix (n_input + 2) by 2
     // desire_graph[i][0] stores the gene which -i is connected with, considering desire edges
     // desire_graph[i][1] stores the gene which +i is connected with, considering desire edges
-    desire_graph = (signed int **)malloc((n_input + 2) * sizeof(*desire_graph));
+    desire_graph = (signed int **)calloc(n_input + 2, sizeof(*desire_graph));
 
     for (i = 0; i <= n_input + 2; i++)
-        desire_graph[i] = malloc(2 * sizeof(signed int));
+        desire_graph[i] = calloc(2, sizeof(signed int));
 
     desire_graph[0][0] = INT_MAX;
     desire_graph[n_input + 1][1] = INT_MAX;
@@ -156,7 +157,7 @@ void createRealityGraph()
     // reality_graph is a matrix (n_input + 2) by 2
     // reality_graph[i][0] stores the gene which -i is connected with, considering reality edges
     // reality_graph[i][1] stores the gene which +i is connected with, considering reality edges
-    reality_graph = (signed int **)malloc((n_input + 2) * sizeof(*reality_graph));
+    reality_graph = (signed int **)calloc(n_input + 2, sizeof(*reality_graph));
     
     // cycle_id is a matrix (n_input + 2) by 2
     // cycle_id[i][0] stores the cycle id where the edge (-i, reality_graph[i][0]) is, plus 1
@@ -165,7 +166,7 @@ void createRealityGraph()
     
     for (i = 0; i <= n_input + 2; i++)
     {
-        reality_graph[i] = malloc(2 * sizeof(signed int));
+        reality_graph[i] = calloc(2, sizeof(signed int));
         cycle_id[i] = calloc(2, sizeof(int));
     }
 
@@ -310,6 +311,7 @@ signed int **findCycle(int initial_pos, int id)
     // ex.: cycle[i][0] stores one node of the edge
     //      cycle[i][1] stores another node of the edge
     //      cycle[i][2] stores whether the edge is oriented from left to right (1) or from right to left (-1)
+    //      cycle[i][3] stores its component id
     // as we do not know initially how many reality edges the cycle has, we first use 'temp_cycle', and then,
     // we create 'cycle' with the correct size
     signed int **cycle;
@@ -337,7 +339,7 @@ signed int **findCycle(int initial_pos, int id)
             cycle_id[-current_pos][0] = id;
         }
 
-        if (temp_cycle[j][1] > 0)
+        if (temp_cycle[j][1] >= 0)
             cycle_id[temp_cycle[j][1]][1] = id;
         else
             cycle_id[-temp_cycle[j][1]][0] = id;
@@ -426,37 +428,153 @@ void findComponents()
 {
     int i;
     int j;
-    signed int current;
+    int k;
+    int id;
+    int last_cycle;
+    signed int last_element;
+    signed int current_element;
 
     // 'count_cycles' stores how many reality edges are in each cycle
     int *count_cycles;
 
     // 'components' stores all the good components
     // if a bad component is found, the algorithm will finish its execution
-    // as we do not know initially how many good components there are, we first use 'temp_components', and then,
-    // we create 'components' with the correct size
+    // as we do not know initially how many good components there are, we first use 'temp_components',
+    // and then, we create 'components' with the correct size
     int **temp_components;
 
-    count_cycles = (int *)calloc(n_cycles, sizeof(int));
+    // 'component_size' stores the size of all components
+    int *component_size;
+
+    // finding all cycles first
+    findAllCycles();
+
+    // 'component_id' stores the component id of each cycle
+    component_id = calloc(n_cycles, sizeof(int));
+
+    count_cycles = calloc(n_cycles, sizeof(int));
     
     temp_components = (int **)calloc(n_cycles, sizeof(*temp_components));
+    component_size = calloc(n_cycles, sizeof(int));
+
+    for (i = 0; i < n_cycles; i++)
+        temp_components[i] = calloc(n_cycles, sizeof(int));
 
     // following the reality edges in order
-    current = 0;
-    for (i = 0; i < n_input + 1; i ++)
+    j = 0;
+    last_cycle = 0;
+    current_element = 0;
+    last_element = 0;
+    for (i = 0; i < n_input + 1; i++)
     {
-        if (current >= 0)
+        if (current_element >= 0)
+            id = cycle_id[current_element][1] - 1;
+        else
+            id = cycle_id[-current_element][0] - 1;
+
+        // if the cycle was found at least once
+        if (count_cycles[id] > 0)
         {
-            if (count_cycles[cycle_id[current][1] - 1])
-            count_cycles[cycle_id[current][1] - 1]++;
-            current = -reality_graph[current][1];
+            // if the cycle does not have a component yet
+            if (component_id[id] == 0)
+            {
+                // if the last edge does not belong to the same cycle
+                if (id != last_cycle)
+                {
+                    // if the cycle of the last edge does not have a component yet
+                    // in that case, we associate both cycles to a new component
+                    if (component_id[last_cycle] == 0)
+                    {
+                        temp_components[j][component_size[j]] = id;
+                        component_id[id] = j + 1;
+                        component_size[j]++;
+                        temp_components[j][component_size[j]] = last_cycle;
+                        component_id[last_cycle] = j + 1;
+                        component_size[j]++;
+                        j++;
+                    }
+                    // if the cycle of the last edge does not have a component yet
+                    // in that case, we associate the cycle of the current edge to the component of
+                    // of the last edge --> the cycles cross each other, so they belong to the same
+                    // component
+                    else
+                    {
+                        k = component_id[last_cycle] - 1;
+                        temp_components[k][component_size[k]] = id;
+                        component_id[id] = component_id[last_cycle];
+                        component_size[k]++;
+                    }
+                }
+                // if the last edge belongs to the same cycle
+                // in that case, we associate the cycle to a new component
+                else
+                {
+                    temp_components[j][component_size[j]] = id;
+                    component_id[id] = j + 1;
+                    component_size[j]++;
+                    j++;
+                }
+            }
+            
         }
         else
         {
-            count_cycles[cycle_id[-current][0] - 1]++;
-            current = -reality_graph[-current][0];
+            // if the reality edge is equal to the desire edge
+            if (current_element >= 0)
+            {
+                if (reality_graph[current_element][1] == desire_graph[current_element][1])
+                {
+                    temp_components[j][component_size[j]] = id;
+                    component_id[id] = j + 1;
+                    component_size[j]++;
+                    j++;
+                }
+            }
+            else
+            {
+                if (reality_graph[-current_element][0] == desire_graph[-current_element][0])
+                {
+                    temp_components[j][component_size[j]] = id;
+                    component_id[id] = j + 1;
+                    component_size[j]++;
+                    j++;
+                }
+            }
         }
+
+        count_cycles[id]++;
+        last_element = current_element;
+        last_cycle = id;
+
+        if (current_element >= 0)
+            current_element = -reality_graph[current_element][1];
+        else
+            current_element = -reality_graph[-current_element][0];
     }
+
+    components = (int **)calloc(j, sizeof(*components));
+
+    for (i = 0; i != j; i++)
+    {
+        components[i] = calloc(component_size[i], sizeof(int));
+        for (k = 0; k < component_size[i]; k++)
+            components[i][k] = temp_components[i][k];
+    }
+
+    printf("\n\nComponents:\n");
+    printf("[ ");
+    for (i = 0; i != j; i++)
+    {
+        printf("[");
+        for (k = 0; k < component_size[i]; k++)
+            printf("%d, ", components[i][k]);
+        printf("]");
+    }
+    printf(" ]\n");
+
+    free(temp_components);
+    free(component_size);
+    free(count_cycles);
 }
 
 void sortReversal()
@@ -474,7 +592,7 @@ int main(int argc, char *argv[])
     createDesireGraph();
     printDesireGraph();
 
-    findAllCycles();
+    findComponents();
 
     //revert(0,3);
     //printSequence();

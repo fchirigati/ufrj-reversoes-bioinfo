@@ -6,17 +6,32 @@
 #include <limits.h>
 
 int n_input;
-int n_cycles;
-int n_components;
 int *position;
-int *component_id;
-int *n_reality_edges;
-int **cycle_id;
 int **components;
 signed int *sequence;
 signed int **reality_graph;
 signed int **desire_graph;
+
+// the following variables have a copy to be used while finding components
+// the reason is that, if we are only checking if the reversal will create
+// bad components, then we cannot change the real variables
+// this copy has the letter 't' in the beginning of its name
+int n_cycles;
+int n_components;
+int *component_size;
+int *component_id;
+int *n_reality_edges;
+int **cycle_id;
 signed int ***cycles;
+
+// copies
+int t_n_cycles;
+int t_n_components;
+int *t_component_size;
+int *t_component_id;
+int *t_n_reality_edges;
+int **t_cycle_id;
+signed int ***t_cycles;
 
 void readInput(char *filename)
 {
@@ -96,16 +111,24 @@ void readInput(char *filename)
     free(element);
 }
 
-void printSequence()
+void printSequence(int space)
 {
     int i;
 
-    printf("\n\nSequencia\n");
+    if (space == 1)
+        printf("\n\n    Sequencia: ");
+    else
+        printf("\n\nSequencia: ");
 
     for (i = 0; i < n_input; i++)
 	{
-		printf("%d, ", sequence[i]); 
+        if (i == n_input - 1)
+            printf("%d", sequence[i]);
+        else
+            printf("%d, ", sequence[i]);
 	}
+
+    printf("\n");
 }
 
 void createDesireGraph()
@@ -145,8 +168,8 @@ void printDesireGraph()
 
     for (i = 0; i <= n_input + 1; i++)
     {
-        printf("(%d, ", desire_graph[i][0]);
-        printf("%d)", desire_graph[i][1]);	
+        printf(" (%d, ", desire_graph[i][0]);
+        printf("%d) ", desire_graph[i][1]);	
     }
 }
 
@@ -161,16 +184,8 @@ void createRealityGraph()
     // reality_graph[i][1] stores the gene which +i is connected with, considering reality edges
     reality_graph = (signed int **)calloc(n_input + 2, sizeof(*reality_graph));
     
-    // cycle_id is a matrix (n_input + 2) by 2
-    // cycle_id[i][0] stores the cycle id where the edge (-i, reality_graph[i][0]) is, plus 1
-    // cycle_id[i][1] stores the cycle id where the edge (+i, reality_graph[i][1]) is, plus 1
-    cycle_id = (int **)calloc(n_input + 2, sizeof(*cycle_id));
-    
-    for (i = 0; i <= n_input + 2; i++)
-    {
+    for (i = 0; i <= n_input + 1; i++)
         reality_graph[i] = calloc(2, sizeof(signed int));
-        cycle_id[i] = calloc(2, sizeof(int));
-    }
 
     reality_graph[0][0] = INT_MAX;
     next = 0;
@@ -210,8 +225,8 @@ void printRealityGraph()
 
     for (i = 0; i <= n_input + 1; i++)
     {
-        printf("(%d, ", reality_graph[i][0]);
-        printf("%d)", reality_graph[i][1]);	
+        printf(" (%d, ", reality_graph[i][0]);
+        printf("%d) ", reality_graph[i][1]);	
     }
 }
 
@@ -277,9 +292,6 @@ void revert(int i, int len)
     int temp_pos;
     signed int temp;
 
-    printf("\n\nReversao(%d, ", i);
-    printf("%d)\n", len);
-
 	for (k = 0; k < len/2; k++)
 	{
         temp_pos = position[abs(sequence[(i + len) - k - 1])];
@@ -301,7 +313,7 @@ void revert(int i, int len)
 
     updateRealityGraph(i, len);
 
-    printSequence();
+    printSequence(1);
 }
 
 signed int **findCycle(int initial_pos, int id)
@@ -335,18 +347,18 @@ signed int **findCycle(int initial_pos, int id)
         if (current_pos >= 0)
         {
             temp_cycle[j][1] = reality_graph[current_pos][1];
-            cycle_id[current_pos][1] = id;
+            t_cycle_id[current_pos][1] = id;
         }
         else
         {
             temp_cycle[j][1] = reality_graph[-current_pos][0];
-            cycle_id[-current_pos][0] = id;
+            t_cycle_id[-current_pos][0] = id;
         }
 
         if (temp_cycle[j][1] >= 0)
-            cycle_id[temp_cycle[j][1]][1] = id;
+            t_cycle_id[temp_cycle[j][1]][1] = id;
         else
-            cycle_id[-temp_cycle[j][1]][0] = id;
+            t_cycle_id[-temp_cycle[j][1]][0] = id;
         
         if (position[abs(temp_cycle[j][0])] < position[abs(temp_cycle[j][1])])
             temp_cycle[j][2] = 1;
@@ -370,10 +382,8 @@ signed int **findCycle(int initial_pos, int id)
     for (i = 0; i != j; i++)
         cycle[i] = temp_cycle[i];
 
-    free(temp_cycle);
-
-    printf("\n\nCycle %d:\n", id - 1);
-    printf("[ ");
+    printf("\n\n    Cycle %d:\n", id - 1);
+    printf("    [ ");
     for (i = 0; i != j; i++)
     {
         printf("[%d", cycle[i][0]);
@@ -390,17 +400,25 @@ void findAllCycles()
     int i;
     int j;
 
-    // 'cycles' stores all the current cycles
+    // 't_cycles' stores all the current cycles
     // as we do not know initially how many cycles there are, we first use 'temp_cycles', and then,
-    // we create 'cycles' with the correct size
+    // we create 't_cycles' with the correct size
     signed int ***temp_cycles;
 
     temp_cycles = (signed int ***)calloc(n_input + 1, sizeof(**temp_cycles));
 
+    // t_cycle_id is a matrix (n_input + 2) by 2
+    // t_cycle_id[i][0] stores the cycle id where the edge (-i, reality_graph[i][0]) is, plus 1
+    // t_cycle_id[i][1] stores the cycle id where the edge (+i, reality_graph[i][1]) is, plus 1
+    t_cycle_id = (int **)calloc(n_input + 2, sizeof(*t_cycle_id));
+
+    for (i = 0; i <= n_input + 1; i++)
+        t_cycle_id[i] = calloc(2, sizeof(int));
+
     j = 0;
     for (i = 0; i < n_input; i++)
     {
-        if (cycle_id[abs(sequence[i])][0] == 0)
+        if (t_cycle_id[abs(sequence[i])][0] == 0)
         {
             if (sequence[i] > 0)
                 temp_cycles[j] = findCycle(-sequence[i], j + 1);
@@ -409,7 +427,7 @@ void findAllCycles()
             j++;
         }
 
-        if (cycle_id[abs(sequence[i])][1] == 0)
+        if (t_cycle_id[abs(sequence[i])][1] == 0)
         {
             if (sequence[i] > 0)
                 temp_cycles[j] = findCycle(sequence[i], j + 1);
@@ -419,13 +437,11 @@ void findAllCycles()
         }
     }
 
-    cycles = (signed int ***)calloc(j, sizeof(**cycles));
-    for (i = 0; i != j; i++)
-        cycles[i] = temp_cycles[i];
+    t_n_cycles = j;
 
-    n_cycles = j;
-
-    free(temp_cycles);
+    t_cycles = (signed int ***)calloc(t_n_cycles, sizeof(**t_cycles));
+    for (i = 0; i < t_n_cycles; i++)
+        t_cycles[i] = temp_cycles[i];
 }
 
 int findComponents(int check)
@@ -449,23 +465,22 @@ int findComponents(int check)
     // and then, we create 'components' with the correct size
     int **temp_components;
 
-    // 'component_size' stores the size of all components
-    int *component_size;
-
     // finding all cycles first
     findAllCycles();
 
-    // 'component_id' stores the component id of each cycle
-    component_id = calloc(n_cycles, sizeof(int));
+    // 't_component_id' stores the component id of each cycle
+    t_component_id = calloc(t_n_cycles, sizeof(int));
 
-    // 'n_reality_edges' stores how many reality edges are in each cycle
-    n_reality_edges = calloc(n_cycles, sizeof(int));
+    // 't_n_reality_edges' stores how many reality edges are in each cycle
+    t_n_reality_edges = calloc(t_n_cycles, sizeof(int));
     
-    temp_components = (int **)calloc(n_cycles, sizeof(*temp_components));
-    component_size = calloc(n_cycles, sizeof(int));
+    temp_components = (int **)calloc(t_n_cycles, sizeof(*temp_components));
 
-    for (i = 0; i < n_cycles; i++)
-        temp_components[i] = calloc(n_cycles, sizeof(int));
+    // 't_component_size' stores the size of all components
+    t_component_size = calloc(t_n_cycles, sizeof(int));
+
+    for (i = 0; i < t_n_cycles; i++)
+        temp_components[i] = calloc(t_n_cycles, sizeof(int));
 
     // following the reality edges in order
     j = 0;
@@ -475,29 +490,29 @@ int findComponents(int check)
     for (i = 0; i < n_input + 1; i++)
     {
         if (current_element >= 0)
-            id = cycle_id[current_element][1] - 1;
+            id = t_cycle_id[current_element][1] - 1;
         else
-            id = cycle_id[-current_element][0] - 1;
+            id = t_cycle_id[-current_element][0] - 1;
 
         // if the cycle was found at least once
-        if (n_reality_edges[id] > 0)
+        if (t_n_reality_edges[id] > 0)
         {
             // if the cycle does not have a component yet
-            if (component_id[id] == 0)
+            if (t_component_id[id] == 0)
             {
                 // if the last edge does not belong to the same cycle
                 if (id != last_cycle)
                 {
                     // if the cycle of the last edge does not have a component yet
                     // in that case, we associate both cycles to a new component
-                    if (component_id[last_cycle] == 0)
+                    if (t_component_id[last_cycle] == 0)
                     {
-                        temp_components[j][component_size[j]] = id;
-                        component_id[id] = j + 1;
-                        component_size[j]++;
-                        temp_components[j][component_size[j]] = last_cycle;
-                        component_id[last_cycle] = j + 1;
-                        component_size[j]++;
+                        temp_components[j][t_component_size[j]] = id;
+                        t_component_id[id] = j + 1;
+                        t_component_size[j]++;
+                        temp_components[j][t_component_size[j]] = last_cycle;
+                        t_component_id[last_cycle] = j + 1;
+                        t_component_size[j]++;
                         j++;
                     }
                     // if the cycle of the last edge does not have a component yet
@@ -506,19 +521,19 @@ int findComponents(int check)
                     // component
                     else
                     {
-                        k = component_id[last_cycle] - 1;
-                        temp_components[k][component_size[k]] = id;
-                        component_id[id] = component_id[last_cycle];
-                        component_size[k]++;
+                        k = t_component_id[last_cycle] - 1;
+                        temp_components[k][t_component_size[k]] = id;
+                        t_component_id[id] = t_component_id[last_cycle];
+                        t_component_size[k]++;
                     }
                 }
                 // if the last edge belongs to the same cycle
                 // in that case, we associate the cycle to a new component
                 else
                 {
-                    temp_components[j][component_size[j]] = id;
-                    component_id[id] = j + 1;
-                    component_size[j]++;
+                    temp_components[j][t_component_size[j]] = id;
+                    t_component_id[id] = j + 1;
+                    t_component_size[j]++;
                     j++;
                 }
             }
@@ -531,9 +546,9 @@ int findComponents(int check)
             {
                 if (reality_graph[current_element][1] == desire_graph[current_element][1])
                 {
-                    temp_components[j][component_size[j]] = id;
-                    component_id[id] = j + 1;
-                    component_size[j]++;
+                    temp_components[j][t_component_size[j]] = id;
+                    t_component_id[id] = j + 1;
+                    t_component_size[j]++;
                     j++;
                 }
             }
@@ -541,15 +556,15 @@ int findComponents(int check)
             {
                 if (reality_graph[-current_element][0] == desire_graph[-current_element][0])
                 {
-                    temp_components[j][component_size[j]] = id;
-                    component_id[id] = j + 1;
-                    component_size[j]++;
+                    temp_components[j][t_component_size[j]] = id;
+                    t_component_id[id] = j + 1;
+                    t_component_size[j]++;
                     j++;
                 }
             }
         }
 
-        n_reality_edges[id]++;
+        t_n_reality_edges[id]++;
         last_element = current_element;
         last_cycle = id;
 
@@ -559,35 +574,35 @@ int findComponents(int check)
             current_element = -reality_graph[-current_element][0];
     }
 
-    n_components = j;
-    components = (int **)calloc(n_components, sizeof(*components));
+    t_n_components = j;
+    components = (int **)calloc(t_n_components, sizeof(*components));
 
-    for (i = 0; i < n_components; i++)
+    for (i = 0; i < t_n_components; i++)
     {
         // checking if the component is bad
         bad_cycles = 0;
-        for (x = 0; x < component_size[i]; x++)
+        for (x = 0; x < t_component_size[i]; x++)
         {
             // checking whether the cycle is good or bad
             id = temp_components[i][x];
-            direction = cycles[id][0][2];
+            direction = t_cycles[id][0][2];
             conv_edges = 1;
 
             // cycles with only one reality edge are not taken into account
-            if (n_reality_edges[id] != 1)
+            if (t_n_reality_edges[id] != 1)
             {
-                for (y = 1; y < n_reality_edges[id]; y++)
+                for (y = 1; y < t_n_reality_edges[id]; y++)
                 {
-                    if (cycles[id][y][2] == direction)
+                    if (t_cycles[id][y][2] == direction)
                         conv_edges++;
                 }
 
-                if (conv_edges == n_reality_edges[id])
+                if (conv_edges == t_n_reality_edges[id])
                     bad_cycles++;
             }
         }
 
-        if (bad_cycles == component_size[i])
+        if (bad_cycles == t_component_size[i])
         {
             if (check == 1)
                 return 1;
@@ -595,58 +610,231 @@ int findComponents(int check)
             {
                 printf("\nUma componente ruim foi encontrada. O algoritmo desenvolvido ");
                 printf("nao trata sequencias que apresentem componentes ruins.\n");
-                printf("Componente ruim:\n[ ");
-                for (x = 0; x < component_size[i]; x++)
-                    printf("%d ", temp_components[i][x]);
+                printf("Componente ruim encontrada:\n[");
+                for (x = 0; x < t_component_size[i]; x++)
+                {
+                    if (x == t_component_size[i] - 1)
+                        printf("%d", temp_components[i][x]);
+                    else
+                        printf("%d, ", temp_components[i][x]);
+                }
                 printf("]\n\nO programa sera finalizado. Bye!\n");
                 exit(1);
 
                 return 0;
             }
         }
+    }
 
-        components[i] = calloc(component_size[i], sizeof(int));
-        for (k = 0; k < component_size[i]; k++)
+    for (i = 0; i < t_n_components; i++)
+    {
+        components[i] = calloc(t_component_size[i], sizeof(int));
+        for (k = 0; k < t_component_size[i]; k++)
             components[i][k] = temp_components[i][k];
     }
 
-    printf("\n\nComponents:\n");
-    printf("[ ");
-    for (i = 0; i < n_components; i++)
+    printf("\n\n    Componentes:\n");
+    printf("    [ ");
+    for (i = 0; i < t_n_components; i++)
     {
         printf("[");
-        for (k = 0; k < component_size[i]; k++)
-            printf("%d, ", components[i][k]);
+        for (k = 0; k < t_component_size[i]; k++)
+        {
+            if (k == t_component_size[i] - 1)
+                printf("%d", components[i][k]);
+            else
+                printf("%d, ", components[i][k]);
+        }
         printf("]");
     }
     printf(" ]\n");
 
-    free(temp_components);
-    free(component_size);
-    free(n_reality_edges);
+    return 0;
+}
 
+void getCopies()
+{
+    int i;
+    int j;
+    int k;
+
+    // deallocating memory
+    free(component_size);
+    free(component_id);
+    free(n_reality_edges);
+    
+    if (cycle_id != NULL)
+    {
+        for (i = 0; i < n_input + 2; i++)
+            free(cycle_id[i]);
+        free(cycle_id);
+    }
+
+    if (cycles != NULL)
+    {
+        for (i = 0; i < n_cycles; i++)
+        {
+            for (j = 0; j < n_reality_edges[i]; i++)
+                free(cycles[i][j]);
+            free (cycles[i]);
+        }
+        free(cycles);
+    }
+
+    // copying
+    n_cycles = t_n_cycles;
+    n_components = t_n_components;
+
+    component_size = calloc(n_components, sizeof(int));
+    for (i = 0; i < n_components; i++)
+        component_size[i] = t_component_size[i];
+
+    component_id = calloc(n_cycles, sizeof(int));
+    n_reality_edges = calloc(n_cycles, sizeof(int));
+    for (i = 0; i < n_cycles; i++)
+    {
+        component_id[i] = t_component_id[i];
+        n_reality_edges[i] = t_n_reality_edges[i];
+    }
+
+    cycle_id = (int **)calloc(n_input + 2, sizeof(*cycle_id));
+    for (i = 0; i < n_input + 2; i++)
+    {
+        cycle_id[i] = calloc(2, sizeof(int));
+        for (j = 0; j < 2; j++)
+            cycle_id[i][j] = t_cycle_id[i][j];
+    }
+
+    cycles = (signed int ***)calloc(n_cycles, sizeof(**cycles));
+    for (i = 0; i < n_cycles; i++)
+    {
+        cycles[i] = (signed int **)calloc(n_reality_edges[i], sizeof(*cycles));
+        for (j = 0; j < n_reality_edges[i]; j++)
+        {
+            cycles[i][j] = calloc(3, sizeof(signed int));
+            for (k = 0; k < 3; k++)
+                cycles[i][j][k] = t_cycles[i][j][k];
+        }
+    }
+
+    // deallocating memory
+    free(t_component_size);
+    free(t_component_id);
+    free(t_n_reality_edges);
+
+    for (i = 0; i < n_input + 2; i++)
+        free(t_cycle_id[i]);
+    free(t_cycle_id);
+
+    for (i = 0; i < n_cycles; i++)
+    {
+        for (j = 0; j < n_reality_edges[i]; j++)
+            free(t_cycles[i][j]);
+        free (t_cycles[i]);
+    }
+    free(t_cycles);
+}
+
+int revertSequence()
+{
+    int i;
+    int j;
+    int x;
+    int y;
+    int temp;
+    int cycle;
+    int output;
+    int first_position;
+    int second_position;
+
+    // for each component
+    for (i = 0; i < n_components; i++)
+    {
+        // for each cycle inside the component
+        for (j = 0; j < component_size[i]; j++)
+        {
+            cycle = components[i][j];
+            // we do not take into account cycles with only one reality edge
+            if (n_reality_edges[cycle] > 1)
+            {
+                // for each reality edge inside the cycle
+                for (x = 0; x < n_reality_edges[cycle] - 1; x++)
+                {
+                    for (y = x + 1; y < n_reality_edges[cycle]; y++)
+                    {
+                        // if there are two divergent edges
+                        if (cycles[cycle][x][2] != cycles[cycle][y][2])
+                        {
+                            if (cycles[cycle][x][2] == -1)
+                            {
+                                first_position = position[abs(cycles[cycle][x][0])];
+                                second_position = position[abs(cycles[cycle][y][0])];
+                            }
+                            else
+                            {
+                                first_position = position[abs(cycles[cycle][x][1])];
+                                second_position = position[abs(cycles[cycle][y][1])];
+                            }
+                            
+                            if (first_position <= second_position)
+                                second_position = second_position - first_position + 1;
+                            else
+                            {
+                                temp = second_position;
+                                second_position = first_position - second_position + 1;
+                                first_position = temp;
+                            }
+
+                            printf("\n\nTestando Reversao (%d, ", first_position);
+                            printf("%d):\n", second_position);
+
+                            revert(first_position, second_position);
+
+                            output = findComponents(1);
+                            if (output == 0)
+                            {
+                                // one good reversal was found
+                                printf("\n\nReversao (%d, ", first_position);
+                                printf("%d) nao gera componentes ruins!\n", second_position);
+                                getCopies();
+                                return 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    printf("\n\nHmm... algo esta errado...\n");
+    exit(1);
     return 0;
 }
 
 void sortReversal()
 {
     int output;
+    int n_reversal;
 
     // finding all the components
     output = findComponents(0);
+    getCopies();
 
-    if (n_components == n_cycles)
-        printf("Done!");
-    else
+    n_reversal = 0;
+    while (n_cycles != n_input + 1)
     {
-
+        revertSequence();
+        n_reversal++;
     }
+
+    printf("\n\nTotal de Reversoes = %d\n", n_reversal);
+    printSequence(0);
 }
 
 int main(int argc, char *argv[])
 {
     readInput(argv[1]);
-    printSequence();
+    printSequence(0);
 
     createRealityGraph();
     //printRealityGraph();
@@ -655,10 +843,6 @@ int main(int argc, char *argv[])
     //printDesireGraph();
 
     sortReversal();
-
-    //revert(0,3);
-    //printSequence();
-    //printRealityGraph();
 
 	return 0;
 }

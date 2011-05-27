@@ -7,8 +7,10 @@
 
 int n_input;
 int n_cycles;
+int n_components;
 int *position;
 int *component_id;
+int *n_reality_edges;
 int **cycle_id;
 int **components;
 signed int *sequence;
@@ -298,6 +300,8 @@ void revert(int i, int len)
     }
 
     updateRealityGraph(i, len);
+
+    printSequence();
 }
 
 signed int **findCycle(int initial_pos, int id)
@@ -424,18 +428,20 @@ void findAllCycles()
     free(temp_cycles);
 }
 
-void findComponents()
+int findComponents(int check)
 {
     int i;
     int j;
     int k;
+    int x;
+    int y;
     int id;
     int last_cycle;
+    int bad_cycles;
+    int conv_edges;
+    signed int direction;
     signed int last_element;
     signed int current_element;
-
-    // 'count_cycles' stores how many reality edges are in each cycle
-    int *count_cycles;
 
     // 'components' stores all the good components
     // if a bad component is found, the algorithm will finish its execution
@@ -452,7 +458,8 @@ void findComponents()
     // 'component_id' stores the component id of each cycle
     component_id = calloc(n_cycles, sizeof(int));
 
-    count_cycles = calloc(n_cycles, sizeof(int));
+    // 'n_reality_edges' stores how many reality edges are in each cycle
+    n_reality_edges = calloc(n_cycles, sizeof(int));
     
     temp_components = (int **)calloc(n_cycles, sizeof(*temp_components));
     component_size = calloc(n_cycles, sizeof(int));
@@ -473,7 +480,7 @@ void findComponents()
             id = cycle_id[-current_element][0] - 1;
 
         // if the cycle was found at least once
-        if (count_cycles[id] > 0)
+        if (n_reality_edges[id] > 0)
         {
             // if the cycle does not have a component yet
             if (component_id[id] == 0)
@@ -542,7 +549,7 @@ void findComponents()
             }
         }
 
-        count_cycles[id]++;
+        n_reality_edges[id]++;
         last_element = current_element;
         last_cycle = id;
 
@@ -552,10 +559,52 @@ void findComponents()
             current_element = -reality_graph[-current_element][0];
     }
 
-    components = (int **)calloc(j, sizeof(*components));
+    n_components = j;
+    components = (int **)calloc(n_components, sizeof(*components));
 
-    for (i = 0; i != j; i++)
+    for (i = 0; i < n_components; i++)
     {
+        // checking if the component is bad
+        bad_cycles = 0;
+        for (x = 0; x < component_size[i]; x++)
+        {
+            // checking whether the cycle is good or bad
+            id = temp_components[i][x];
+            direction = cycles[id][0][2];
+            conv_edges = 1;
+
+            // cycles with only one reality edge are not taken into account
+            if (n_reality_edges[id] != 1)
+            {
+                for (y = 1; y < n_reality_edges[id]; y++)
+                {
+                    if (cycles[id][y][2] == direction)
+                        conv_edges++;
+                }
+
+                if (conv_edges == n_reality_edges[id])
+                    bad_cycles++;
+            }
+        }
+
+        if (bad_cycles == component_size[i])
+        {
+            if (check == 1)
+                return 1;
+            else
+            {
+                printf("\nUma componente ruim foi encontrada. O algoritmo desenvolvido ");
+                printf("nao trata sequencias que apresentem componentes ruins.\n");
+                printf("Componente ruim:\n[ ");
+                for (x = 0; x < component_size[i]; x++)
+                    printf("%d ", temp_components[i][x]);
+                printf("]\n\nO programa sera finalizado. Bye!\n");
+                exit(1);
+
+                return 0;
+            }
+        }
+
         components[i] = calloc(component_size[i], sizeof(int));
         for (k = 0; k < component_size[i]; k++)
             components[i][k] = temp_components[i][k];
@@ -563,7 +612,7 @@ void findComponents()
 
     printf("\n\nComponents:\n");
     printf("[ ");
-    for (i = 0; i != j; i++)
+    for (i = 0; i < n_components; i++)
     {
         printf("[");
         for (k = 0; k < component_size[i]; k++)
@@ -574,11 +623,24 @@ void findComponents()
 
     free(temp_components);
     free(component_size);
-    free(count_cycles);
+    free(n_reality_edges);
+
+    return 0;
 }
 
 void sortReversal()
 {
+    int output;
+
+    // finding all the components
+    output = findComponents(0);
+
+    if (n_components == n_cycles)
+        printf("Done!");
+    else
+    {
+
+    }
 }
 
 int main(int argc, char *argv[])
@@ -587,12 +649,12 @@ int main(int argc, char *argv[])
     printSequence();
 
     createRealityGraph();
-    printRealityGraph();
+    //printRealityGraph();
 
     createDesireGraph();
-    printDesireGraph();
+    //printDesireGraph();
 
-    findComponents();
+    sortReversal();
 
     //revert(0,3);
     //printSequence();

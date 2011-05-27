@@ -368,7 +368,7 @@ signed int **findCycle(int initial_pos, int id)
 
     free(temp_cycle);
 
-    printf("\n\nCycle:\n");
+    printf("\n\nCycle %d:\n", id - 1);
     printf("[ ");
     for (i = 0; i != j; i++)
     {

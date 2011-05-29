@@ -106,6 +106,7 @@ void readInput(char *filename)
     }
 
     position[n_input + 1] = n_input + 1;
+    position[0] = -1;
 
     free(input);
     free(element);
@@ -313,6 +314,7 @@ void revert(int i, int len)
 
     updateRealityGraph(i, len);
 
+    //printRealityGraph();
     printSequence(1);
 }
 
@@ -375,6 +377,7 @@ signed int **findCycle(int initial_pos, int id)
         if (current_pos == initial_pos)
             i++;
 
+        t_n_reality_edges[id - 1]++;
         j++;
     }
 
@@ -405,12 +408,17 @@ void findAllCycles()
     // we create 't_cycles' with the correct size
     signed int ***temp_cycles;
 
+    int *temp_reality_edges;
+
     temp_cycles = (signed int ***)calloc(n_input + 1, sizeof(**temp_cycles));
 
     // t_cycle_id is a matrix (n_input + 2) by 2
     // t_cycle_id[i][0] stores the cycle id where the edge (-i, reality_graph[i][0]) is, plus 1
     // t_cycle_id[i][1] stores the cycle id where the edge (+i, reality_graph[i][1]) is, plus 1
     t_cycle_id = (int **)calloc(n_input + 2, sizeof(*t_cycle_id));
+
+    // 't_n_reality_edges' stores how many reality edges are in each cycle
+    t_n_reality_edges = calloc(n_input + 1, sizeof(int));
 
     for (i = 0; i <= n_input + 1; i++)
         t_cycle_id[i] = calloc(2, sizeof(int));
@@ -442,6 +450,16 @@ void findAllCycles()
     t_cycles = (signed int ***)calloc(t_n_cycles, sizeof(**t_cycles));
     for (i = 0; i < t_n_cycles; i++)
         t_cycles[i] = temp_cycles[i];
+
+    temp_reality_edges = calloc(t_n_cycles, sizeof(int));
+    for (i = 0; i < t_n_cycles; i++)
+        temp_reality_edges[i] = t_n_reality_edges[i];
+
+    free(t_n_reality_edges);
+    t_n_reality_edges = calloc(t_n_cycles, sizeof(int));
+    for (i = 0; i < t_n_cycles; i++)
+        t_n_reality_edges[i] = temp_reality_edges[i];
+
 }
 
 int findComponents(int check)
@@ -449,15 +467,22 @@ int findComponents(int check)
     int i;
     int j;
     int k;
+    int w;
     int x;
     int y;
+    int z;
     int id;
-    int last_cycle;
+    int c_id;
+    int n_edges;
     int bad_cycles;
     int conv_edges;
     signed int direction;
-    signed int last_element;
     signed int current_element;
+
+    // 'edge_cycle_id' stores the cycles' id in order of the reality edges
+    // 'already_iterated' stores if we have already iterated over a cycle id
+    int *edge_cycle_id;
+    int *already_iterated;
 
     // 'components' stores all the good components
     // if a bad component is found, the algorithm will finish its execution
@@ -470,23 +495,21 @@ int findComponents(int check)
 
     // 't_component_id' stores the component id of each cycle
     t_component_id = calloc(t_n_cycles, sizeof(int));
-
-    // 't_n_reality_edges' stores how many reality edges are in each cycle
-    t_n_reality_edges = calloc(t_n_cycles, sizeof(int));
     
     temp_components = (int **)calloc(t_n_cycles, sizeof(*temp_components));
 
     // 't_component_size' stores the size of all components
     t_component_size = calloc(t_n_cycles, sizeof(int));
 
+    edge_cycle_id = calloc(n_input + 1, sizeof(int));
+
+    already_iterated = calloc(t_n_cycles + 1, sizeof(int));
+
     for (i = 0; i < t_n_cycles; i++)
         temp_components[i] = calloc(t_n_cycles, sizeof(int));
 
     // following the reality edges in order
-    j = 0;
-    last_cycle = 0;
     current_element = 0;
-    last_element = 0;
     for (i = 0; i < n_input + 1; i++)
     {
         if (current_element >= 0)
@@ -494,84 +517,124 @@ int findComponents(int check)
         else
             id = t_cycle_id[-current_element][0] - 1;
 
-        // if the cycle was found at least once
-        if (t_n_reality_edges[id] > 0)
-        {
-            // if the cycle does not have a component yet
-            if (t_component_id[id] == 0)
-            {
-                // if the last edge does not belong to the same cycle
-                if (id != last_cycle)
-                {
-                    // if the cycle of the last edge does not have a component yet
-                    // in that case, we associate both cycles to a new component
-                    if (t_component_id[last_cycle] == 0)
-                    {
-                        temp_components[j][t_component_size[j]] = id;
-                        t_component_id[id] = j + 1;
-                        t_component_size[j]++;
-                        temp_components[j][t_component_size[j]] = last_cycle;
-                        t_component_id[last_cycle] = j + 1;
-                        t_component_size[j]++;
-                        j++;
-                    }
-                    // if the cycle of the last edge does not have a component yet
-                    // in that case, we associate the cycle of the current edge to the component of
-                    // of the last edge --> the cycles cross each other, so they belong to the same
-                    // component
-                    else
-                    {
-                        k = t_component_id[last_cycle] - 1;
-                        temp_components[k][t_component_size[k]] = id;
-                        t_component_id[id] = t_component_id[last_cycle];
-                        t_component_size[k]++;
-                    }
-                }
-                // if the last edge belongs to the same cycle
-                // in that case, we associate the cycle to a new component
-                else
-                {
-                    temp_components[j][t_component_size[j]] = id;
-                    t_component_id[id] = j + 1;
-                    t_component_size[j]++;
-                    j++;
-                }
-            }
-            
-        }
-        else
-        {
-            // if the reality edge is equal to the desire edge
-            if (current_element >= 0)
-            {
-                if (reality_graph[current_element][1] == desire_graph[current_element][1])
-                {
-                    temp_components[j][t_component_size[j]] = id;
-                    t_component_id[id] = j + 1;
-                    t_component_size[j]++;
-                    j++;
-                }
-            }
-            else
-            {
-                if (reality_graph[-current_element][0] == desire_graph[-current_element][0])
-                {
-                    temp_components[j][t_component_size[j]] = id;
-                    t_component_id[id] = j + 1;
-                    t_component_size[j]++;
-                    j++;
-                }
-            }
-        }
-
-        t_n_reality_edges[id]++;
-        last_element = current_element;
-        last_cycle = id;
+        edge_cycle_id[i] = id;
 
         if (current_element >= 0)
             current_element = -reality_graph[current_element][1];
         else
             current_element = -reality_graph[-current_element][0];
+    }
+
+    j = 0;
+    for (i = 0; i < n_input + 1; i++)
+    {
+        id = edge_cycle_id[i];
+        n_edges = t_n_reality_edges[id];
+
+        if (already_iterated[id] == 0)
+        {
+            // if the cycle has only one reality edge
+            // associate the cycle with a new component
+            if (n_edges == 1)
+            {
+                temp_components[j][t_component_size[j]] = id;
+                t_component_id[id] = j + 1;
+                t_component_size[j]++;
+                already_iterated[id]++;
+                j++;
+            }
+            // if the cycle has more than one reality edge
+            else
+            {
+                x = 0;
+                y = 1;
+                while (x != n_edges - 1)
+                {
+                    c_id = edge_cycle_id[i + y];
+
+                    // if the edge belongs to the same cycle
+                    if (c_id == id)
+                    {
+                        x++;
+
+                        // if the cycle does not have a component yet
+                        // associate the cycle with a new component
+                        if (t_component_id[id] == 0)
+                        {
+                            temp_components[j][t_component_size[j]] = id;
+                            t_component_id[id] = j + 1;
+                            t_component_size[j]++;
+                            j++;
+                        }
+                    }
+                    // if the edge does not belong to the same cycle
+                    else if (already_iterated[c_id] == 0)
+                    {
+                        // if the cycle has only one reality edge
+                        // associate the cycle with a new component
+                        if (t_n_reality_edges[c_id] == 1)
+                        {
+                            temp_components[j][t_component_size[j]] = c_id;
+                            t_component_id[c_id] = j + 1;
+                            t_component_size[j]++;
+                            already_iterated[c_id]++;
+                            j++;
+                        }
+                        // if the cycle has more than one reality edge
+                        else
+                        {
+                            if (t_component_id[c_id] == 0)
+                            {
+                                w = 1;
+                                z = y + 1;
+                                while (1)
+                                {
+                                    if (edge_cycle_id[i + z] == c_id)
+                                        w++;
+                                    else if (edge_cycle_id[i + z] == id)
+                                        break;
+                                    z++;
+                                }
+
+                                // the cycle is associated with a new component
+                                if (w == t_n_reality_edges[c_id])
+                                {
+                                    temp_components[j][t_component_size[j]] = c_id;
+                                    t_component_id[c_id] = j + 1;
+                                    t_component_size[j]++;
+                                    j++;
+                                }
+                                // the cycle belongs to the same component
+                                else
+                                {
+                                    if (t_component_id[id] == 0)
+                                    {
+                                        temp_components[j][t_component_size[j]] = id;
+                                        t_component_id[id] = j + 1;
+                                        t_component_size[j]++;
+                                        temp_components[j][t_component_size[j]] = c_id;
+                                        t_component_id[c_id] = j + 1;
+                                        t_component_size[j]++;
+                                        j++;
+                                    }
+                                    else
+                                    {
+                                        k = t_component_id[id] - 1;
+                                        temp_components[k][t_component_size[k]] = c_id;
+                                        t_component_id[c_id] = t_component_id[id];
+                                        t_component_size[k]++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    y++;
+                }
+            }
+
+            already_iterated[id]++;
+        }
     }
 
     t_n_components = j;
@@ -741,7 +804,6 @@ int revertSequence()
     int j;
     int x;
     int y;
-    int temp;
     int cycle;
     int output;
     int first_position;
@@ -769,21 +831,24 @@ int revertSequence()
                             {
                                 first_position = position[abs(cycles[cycle][x][0])];
                                 second_position = position[abs(cycles[cycle][y][0])];
+                                if (first_position > second_position)
+                                {
+                                    first_position = position[abs(cycles[cycle][x][1])];
+                                    second_position = position[abs(cycles[cycle][y][1])];
+                                }
                             }
                             else
                             {
                                 first_position = position[abs(cycles[cycle][x][1])];
                                 second_position = position[abs(cycles[cycle][y][1])];
+                                if (first_position > second_position)
+                                {
+                                    first_position = position[abs(cycles[cycle][x][0])];
+                                    second_position = position[abs(cycles[cycle][y][0])];
+                                }
                             }
                             
-                            if (first_position <= second_position)
-                                second_position = second_position - first_position + 1;
-                            else
-                            {
-                                temp = second_position;
-                                second_position = first_position - second_position + 1;
-                                first_position = temp;
-                            }
+                            second_position = second_position - first_position + 1;
 
                             printf("\n\nTestando Reversao (%d, ", first_position);
                             printf("%d):\n", second_position);
@@ -799,6 +864,8 @@ int revertSequence()
                                 getCopies();
                                 return 0;
                             }
+                            else
+                                revert(first_position, second_position);
                         }
                     }
                 }

@@ -11,6 +11,7 @@ int **components;
 signed int *sequence;
 signed int **reality_graph;
 signed int **desire_graph;
+FILE *output_file;
 
 // the following variables have a copy to be used while finding components
 // the reason is that, if we are only checking if the reversal will create
@@ -110,6 +111,41 @@ void readInput(char *filename)
 
     free(input);
     free(element);
+}
+
+void beginWriteFile(char *filename)
+{
+    int i;
+
+    output_file = fopen(filename, "w");
+    fprintf(output_file, "%s\n", "############################################");
+    fprintf(output_file, "%s\n", "## Ordenação por reversão [com sinal]     ##");
+    fprintf(output_file, "%s\n", "## Grupo: Fernando Seabra Chirigati       ##");
+    fprintf(output_file, "%s\n", "##        Rafael Dahis                    ##");
+    fprintf(output_file, "%s\n", "##        Rafael Oliveira Lopes           ##");
+    fprintf(output_file, "%s\n", "##        Victor Soares Bursztyn          ##");
+    fprintf(output_file, "%s\n", "##        Sillas Labarba Maciel Moreira   ##");
+    fprintf(output_file, "%s\n", "############################################");
+    fprintf(output_file, "%s\n", "");
+    fprintf(output_file, "%s\n", "--> Sequência de reversões para a sequinte sequência:");
+    fprintf(output_file, "%s\n", "");
+    
+    fprintf(output_file, "%s", "    ");
+    for (i = 0; i < n_input; i++)
+	{
+        if (i == n_input - 1)
+            fprintf(output_file, "%d", sequence[i]);
+        else
+            fprintf(output_file, "%d, ", sequence[i]);
+	}
+
+    fprintf(output_file, "%s\n", "");
+    fprintf(output_file, "%s\n", "");
+}
+
+void endWriteFile()
+{
+    fclose(output_file);
 }
 
 void printSequence(int space)
@@ -315,7 +351,7 @@ void revert(int i, int len)
     updateRealityGraph(i, len);
 
     //printRealityGraph();
-    printSequence(1);
+    //printSequence(1);
 }
 
 signed int **findCycle(int initial_pos, int id)
@@ -385,15 +421,15 @@ signed int **findCycle(int initial_pos, int id)
     for (i = 0; i != j; i++)
         cycle[i] = temp_cycle[i];
 
-    printf("\n\n    Cycle %d:\n", id - 1);
-    printf("    [ ");
-    for (i = 0; i != j; i++)
-    {
-        printf("[%d", cycle[i][0]);
-        printf(", %d", cycle[i][1]);
-        printf(", %d] ", cycle[i][2]);
-    }
-    printf("]\n");
+    //printf("\n\n    Cycle %d:\n", id - 1);
+    //printf("    [ ");
+    //for (i = 0; i != j; i++)
+    //{
+    //    printf("[%d", cycle[i][0]);
+    //    printf(", %d", cycle[i][1]);
+    //    printf(", %d] ", cycle[i][2]);
+    //}
+    //printf("]\n");
 
     return cycle;
 }
@@ -671,17 +707,23 @@ int findComponents(int check)
                 return 1;
             else
             {
-                printf("\nUma componente ruim foi encontrada. O algoritmo desenvolvido ");
-                printf("nao trata sequencias que apresentem componentes ruins.\n");
-                printf("Componente ruim encontrada:\n[");
-                for (x = 0; x < t_component_size[i]; x++)
-                {
-                    if (x == t_component_size[i] - 1)
-                        printf("%d", temp_components[i][x]);
-                    else
-                        printf("%d, ", temp_components[i][x]);
-                }
-                printf("]\n\nO programa sera finalizado. Bye!\n");
+                printf("\nA sequencia possui pelo menos uma componente ruim. O algoritmo desenvolvido ");
+                printf("nao trata sequencias que apresentem componentes ruins. O programa sera finalizado. Bye!\n");
+
+                fprintf(output_file, "    %s", "A sequência possui pelo menos uma componente ruim. O algoritmo desenvolvido ");
+                fprintf(output_file, "%s\n", "não trata sequências que apresentem componentes ruins. O programa foi finalizado.");
+
+                //printf("Primeira componente ruim encontrada:\n[");
+                //for (x = 0; x < t_component_size[i]; x++)
+                //{
+                //    if (x == t_component_size[i] - 1)
+                //        printf("%d", temp_components[i][x]);
+                //    else
+                //        printf("%d, ", temp_components[i][x]);
+                //}
+                //printf("]\n\nO programa sera finalizado. Bye!\n");
+
+                endWriteFile();
                 exit(1);
 
                 return 0;
@@ -696,21 +738,21 @@ int findComponents(int check)
             components[i][k] = temp_components[i][k];
     }
 
-    printf("\n\n    Componentes:\n");
-    printf("    [ ");
-    for (i = 0; i < t_n_components; i++)
-    {
-        printf("[");
-        for (k = 0; k < t_component_size[i]; k++)
-        {
-            if (k == t_component_size[i] - 1)
-                printf("%d", components[i][k]);
-            else
-                printf("%d, ", components[i][k]);
-        }
-        printf("]");
-    }
-    printf(" ]\n");
+    //printf("\n\n    Componentes:\n");
+    //printf("    [ ");
+    //for (i = 0; i < t_n_components; i++)
+    //{
+    //    printf("[");
+    //    for (k = 0; k < t_component_size[i]; k++)
+    //    {
+    //        if (k == t_component_size[i] - 1)
+    //            printf("%d", components[i][k]);
+    //        else
+    //            printf("%d, ", components[i][k]);
+    //    }
+    //    printf("]");
+    //}
+    //printf(" ]\n");
 
     return 0;
 }
@@ -802,6 +844,7 @@ int revertSequence()
 {
     int i;
     int j;
+    int k;
     int x;
     int y;
     int cycle;
@@ -850,8 +893,8 @@ int revertSequence()
                             
                             second_position = second_position - first_position + 1;
 
-                            printf("\n\nTestando Reversao (%d, ", first_position);
-                            printf("%d):\n", second_position);
+                            //printf("\n\nTestando Reversao (%d, ", first_position);
+                            //printf("%d):\n", second_position);
 
                             revert(first_position, second_position);
 
@@ -859,8 +902,23 @@ int revertSequence()
                             if (output == 0)
                             {
                                 // one good reversal was found
-                                printf("\n\nReversao (%d, ", first_position);
-                                printf("%d) nao gera componentes ruins!\n", second_position);
+                                //printf("\n\nReversao (%d, ", first_position);
+                                //printf("%d) nao gera componentes ruins!\n", second_position);
+                                fprintf(output_file, "    Reversão(%d, ", first_position + 1);
+                                fprintf(output_file, "%d)\n", second_position + first_position + 1);
+                                fprintf(output_file, "    %s\n", "Sequência resultante:");
+
+                                fprintf(output_file, "%s", "        ");
+                                for (k = 0; k < n_input; k++)
+	                            {
+                                    if (k == n_input - 1)
+                                        fprintf(output_file, "%d", sequence[k]);
+                                    else
+                                        fprintf(output_file, "%d, ", sequence[k]);
+	                            }
+                                fprintf(output_file, "%s\n", "");
+                                fprintf(output_file, "%s\n", "");
+
                                 getCopies();
                                 return 0;
                             }
@@ -873,7 +931,6 @@ int revertSequence()
         }
     }
 
-    printf("\n\nHmm... algo esta errado...\n");
     exit(1);
     return 0;
 }
@@ -894,14 +951,16 @@ void sortReversal()
         n_reversal++;
     }
 
-    printf("\n\nTotal de Reversoes = %d\n", n_reversal);
-    printSequence(0);
+    printf("\n\nDistancia = %d\n", n_reversal);
+    fprintf(output_file, "    Distância: %d", n_reversal);
+    //printSequence(0);
 }
 
 int main(int argc, char *argv[])
 {
     readInput(argv[1]);
-    printSequence(0);
+    beginWriteFile(argv[2]);
+    //printSequence(0);
 
     createRealityGraph();
     //printRealityGraph();
@@ -910,6 +969,8 @@ int main(int argc, char *argv[])
     //printDesireGraph();
 
     sortReversal();
+
+    endWriteFile();
 
 	return 0;
 }

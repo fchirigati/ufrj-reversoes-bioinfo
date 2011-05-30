@@ -125,7 +125,6 @@ void beginWriteFile(char *filename)
     fprintf(output_file, "%s\n", "##        Rafael Dahis                    ##");
     fprintf(output_file, "%s\n", "##        Rafael Oliveira Lopes           ##");
     fprintf(output_file, "%s\n", "##        Victor Soares Bursztyn          ##");
-    fprintf(output_file, "%s\n", "##        Sillas Labarba Maciel Moreira   ##");
     fprintf(output_file, "%s\n", "############################################");
     fprintf(output_file, "%s\n", "");
     fprintf(output_file, "%s\n", "--> Sequência de reversões para a sequinte sequência:");
@@ -634,17 +633,31 @@ int findComponents(int check)
                                 }
 
                                 // the cycle is inside another cycle
-                                if (w == t_n_reality_edges[c_id])
-                                {
-                                    temp_components[j][t_component_size[j]] = c_id;
-                                    t_component_id[c_id] = j + 1;
-                                    t_component_size[j]++;
-                                    j++;
-                                }
+                                if (w != t_n_reality_edges[c_id])
+                                //{
+                                //    temp_components[j][t_component_size[j]] = c_id;
+                                //    t_component_id[c_id] = j + 1;
+                                //    t_component_size[j]++;
+                                //    j++;
+                                //}
                                 // the cycle belongs to the same component
-                                else
+                                //else
                                 {
-                                    if (t_component_id[id] == 0)
+                                    if (t_component_id[c_id] != 0)
+                                    {
+                                        k = t_component_id[c_id] - 1;
+                                        temp_components[k][t_component_size[k]] = id;
+                                        t_component_id[id] = t_component_id[c_id];
+                                        t_component_size[k]++;
+                                    }
+                                    else if (t_component_id[id] != 0)
+                                    {
+                                        k = t_component_id[id] - 1;
+                                        temp_components[k][t_component_size[k]] = c_id;
+                                        t_component_id[c_id] = t_component_id[id];
+                                        t_component_size[k]++;
+                                    }
+                                    else
                                     {
                                         temp_components[j][t_component_size[j]] = id;
                                         t_component_id[id] = j + 1;
@@ -653,13 +666,6 @@ int findComponents(int check)
                                         t_component_id[c_id] = j + 1;
                                         t_component_size[j]++;
                                         j++;
-                                    }
-                                    else
-                                    {
-                                        k = t_component_id[id] - 1;
-                                        temp_components[k][t_component_size[k]] = c_id;
-                                        t_component_id[c_id] = t_component_id[id];
-                                        t_component_size[k]++;
                                     }
                                 }
                             }

@@ -7,7 +7,6 @@
 
 int n_input;
 int *position;
-int **components;
 signed int *sequence;
 signed int **reality_graph;
 signed int **desire_graph;
@@ -23,6 +22,7 @@ int *component_size;
 int *component_id;
 int *n_reality_edges;
 int **cycle_id;
+int **components;
 signed int ***cycles;
 
 // copies
@@ -32,6 +32,7 @@ int *t_component_size;
 int *t_component_id;
 int *t_n_reality_edges;
 int **t_cycle_id;
+int **t_components;
 signed int ***t_cycles;
 
 void readInput(char *filename)
@@ -290,7 +291,7 @@ void updateRealityGraph(int i, int len)
     else
     {
         if (i == 0)
-            reality_graph[sequence[i]][1] = 0;
+            reality_graph[-sequence[i]][1] = 0;
         else
             reality_graph[-sequence[i]][1] = sequence[i - 1];
     }
@@ -341,9 +342,9 @@ void revert(int i, int len)
 		sequence[i + k] = -temp;
 	}
 
-	middle = (int)floor(len/2);
 	if (len%2 == 1)
     {
+        middle = (int)floor(len/2);
         temp = sequence[i + middle];
         sequence[i + middle] = -temp;
     }
@@ -351,7 +352,7 @@ void revert(int i, int len)
     updateRealityGraph(i, len);
 
     //printRealityGraph();
-    //printSequence(1);
+    printSequence(1);
 }
 
 signed int **findCycle(int initial_pos, int id)
@@ -421,15 +422,15 @@ signed int **findCycle(int initial_pos, int id)
     for (i = 0; i != j; i++)
         cycle[i] = temp_cycle[i];
 
-    //printf("\n\n    Cycle %d:\n", id - 1);
-    //printf("    [ ");
-    //for (i = 0; i != j; i++)
-    //{
-    //    printf("[%d", cycle[i][0]);
-    //    printf(", %d", cycle[i][1]);
-    //    printf(", %d] ", cycle[i][2]);
-    //}
-    //printf("]\n");
+    printf("\n\n    Cycle %d:\n", id - 1);
+    printf("    [ ");
+    for (i = 0; i != j; i++)
+    {
+        printf("[%d", cycle[i][0]);
+        printf(", %d", cycle[i][1]);
+        printf(", %d] ", cycle[i][2]);
+    }
+    printf("]\n");
 
     return cycle;
 }
@@ -632,7 +633,7 @@ int findComponents(int check)
                                     z++;
                                 }
 
-                                // the cycle is associated with a new component
+                                // the cycle is inside another cycle
                                 if (w == t_n_reality_edges[c_id])
                                 {
                                     temp_components[j][t_component_size[j]] = c_id;
@@ -674,7 +675,7 @@ int findComponents(int check)
     }
 
     t_n_components = j;
-    components = (int **)calloc(t_n_components, sizeof(*components));
+    t_components = (int **)calloc(t_n_components, sizeof(*t_components));
 
     for (i = 0; i < t_n_components; i++)
     {
@@ -733,26 +734,26 @@ int findComponents(int check)
 
     for (i = 0; i < t_n_components; i++)
     {
-        components[i] = calloc(t_component_size[i], sizeof(int));
+        t_components[i] = calloc(t_component_size[i], sizeof(int));
         for (k = 0; k < t_component_size[i]; k++)
-            components[i][k] = temp_components[i][k];
+            t_components[i][k] = temp_components[i][k];
     }
 
-    //printf("\n\n    Componentes:\n");
-    //printf("    [ ");
-    //for (i = 0; i < t_n_components; i++)
-    //{
-    //    printf("[");
-    //    for (k = 0; k < t_component_size[i]; k++)
-    //    {
-    //        if (k == t_component_size[i] - 1)
-    //            printf("%d", components[i][k]);
-    //        else
-    //            printf("%d, ", components[i][k]);
-    //    }
-    //    printf("]");
-    //}
-    //printf(" ]\n");
+    printf("\n\n    Componentes:\n");
+    printf("    [ ");
+    for (i = 0; i < t_n_components; i++)
+    {
+        printf("[");
+        for (k = 0; k < t_component_size[i]; k++)
+        {
+            if (k == t_component_size[i] - 1)
+                printf("%d", t_components[i][k]);
+            else
+                printf("%d, ", t_components[i][k]);
+        }
+        printf("]");
+    }
+    printf(" ]\n");
 
     return 0;
 }
@@ -784,6 +785,13 @@ void getCopies()
             free (cycles[i]);
         }
         free(cycles);
+    }
+
+    if (components != NULL)
+    {
+        for (i = 0; i < n_components; i++)
+            free(components[i]);
+        free(components);
     }
 
     // copying
@@ -822,6 +830,14 @@ void getCopies()
         }
     }
 
+    components = (int **)calloc(n_components, sizeof(*components));
+    for (i = 0; i < n_components; i++)
+    {
+        components[i] = calloc(component_size[i], sizeof(int));
+        for (j = 0; j < component_size[i]; j++)
+            components[i][j] = t_components[i][j];
+    }
+
     // deallocating memory
     free(t_component_size);
     free(t_component_id);
@@ -838,6 +854,10 @@ void getCopies()
         free (t_cycles[i]);
     }
     free(t_cycles);
+
+    for (i = 0; i < n_components; i++)
+        free(t_components[i]);
+    free(t_components);
 }
 
 int revertSequence()
@@ -876,8 +896,8 @@ int revertSequence()
                                 second_position = position[abs(cycles[cycle][y][0])];
                                 if (first_position > second_position)
                                 {
-                                    first_position = position[abs(cycles[cycle][x][1])];
-                                    second_position = position[abs(cycles[cycle][y][1])];
+                                    first_position = position[abs(cycles[cycle][y][1])];
+                                    second_position = position[abs(cycles[cycle][x][1])];
                                 }
                             }
                             else
@@ -886,15 +906,15 @@ int revertSequence()
                                 second_position = position[abs(cycles[cycle][y][1])];
                                 if (first_position > second_position)
                                 {
-                                    first_position = position[abs(cycles[cycle][x][0])];
-                                    second_position = position[abs(cycles[cycle][y][0])];
+                                    first_position = position[abs(cycles[cycle][y][0])];
+                                    second_position = position[abs(cycles[cycle][x][0])];
                                 }
                             }
                             
                             second_position = second_position - first_position + 1;
 
-                            //printf("\n\nTestando Reversao (%d, ", first_position);
-                            //printf("%d):\n", second_position);
+                            printf("\n\nTestando Reversao (%d, ", first_position);
+                            printf("%d):\n", second_position);
 
                             revert(first_position, second_position);
 
@@ -902,13 +922,19 @@ int revertSequence()
                             if (output == 0)
                             {
                                 // one good reversal was found
-                                //printf("\n\nReversao (%d, ", first_position);
-                                //printf("%d) nao gera componentes ruins!\n", second_position);
+                                printf("\n\nReversao (%d, ", first_position);
+                                printf("%d) nao gera componentes ruins!\n", second_position);
+                                //fprintf(output_file, "    cycles[cycle][x][0]=%d\n", cycles[cycle][x][0]);
+                                //fprintf(output_file, "    cycles[cycle][x][1]=%d\n", cycles[cycle][x][1]);
+                                //fprintf(output_file, "    cycles[cycle][x][2]=%d\n", cycles[cycle][x][2]);
+                                //fprintf(output_file, "    cycles[cycle][y][0]=%d\n", cycles[cycle][y][0]);
+                                //fprintf(output_file, "    cycles[cycle][y][1]=%d\n", cycles[cycle][y][1]);
+
                                 fprintf(output_file, "    Reversão(%d, ", first_position + 1);
                                 fprintf(output_file, "%d)\n", second_position + first_position + 1);
                                 fprintf(output_file, "    %s\n", "Sequência resultante:");
-
                                 fprintf(output_file, "%s", "        ");
+
                                 for (k = 0; k < n_input; k++)
 	                            {
                                     if (k == n_input - 1)
